@@ -1,3 +1,5 @@
+import { ColumnFiltersState } from '@tanstack/react-table';
+import { useState } from 'react';
 import {
   booleanFilterFn,
   DataGrid,
@@ -9,17 +11,20 @@ import {
 import CodeDemo from '../../components/CodeDemo';
 import { demoData } from '../../demoData';
 
-export default function InitialStateExample() {
+export default function StateExample() {
+  const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
+
   return (
     <CodeDemo code={grid_usage}>
       <DataGrid
-        data={demoData}
+        data={demoData.slice(0, 25)}
         striped
         highlightOnHover
-        withGlobalFilter
-        withPagination
         withColumnFilters
-        withSorting
+        onFilter={setColumnFilters}
+        state={{
+          columnFilters,
+        }}
         columns={[
           {
             accessorKey: 'text',
@@ -53,18 +58,6 @@ export default function InitialStateExample() {
             filterFn: booleanFilterFn,
           },
         ]}
-        initialState={{
-          pagination: {
-            pageIndex: 2,
-          },
-          sorting: [
-            {
-              id: 'value',
-              desc: false,
-            },
-          ],
-          columnFilters: [{ id: 'value', value: { op: 'gt', value: 100 } }],
-        }}
       />
     </CodeDemo>
   );
@@ -79,16 +72,19 @@ import {
   stringFilterFn,
 } from 'mantine-data-grid';
 
-function Demo() {
+export function Demo() {
+  const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
+
   return (
     <DataGrid
-      data={demoData}
+      data={demoData.slice(0, 25)}
       striped
       highlightOnHover
-      withGlobalFilter
-      withPagination
       withColumnFilters
-      withSorting
+      onFilter={setColumnFilters}
+      state={{
+        columnFilters,
+      }}
       columns={[
         {
           accessorKey: 'text',
@@ -122,18 +118,6 @@ function Demo() {
           filterFn: booleanFilterFn,
         },
       ]}
-      initialState={{
-        pagination: {
-          pageIndex: 2,
-        },
-        sorting: [
-          {
-            id: 'value',
-            desc: false,
-          },
-        ],
-        columnFilters: [{ id: 'value', value: { op: 'gt', value: 100 } }],
-      }}
     />
   );
 }

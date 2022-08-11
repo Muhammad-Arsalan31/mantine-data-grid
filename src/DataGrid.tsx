@@ -1,5 +1,18 @@
 import { useCallback, useEffect, useImperativeHandle, useState } from 'react';
-import { Box, ActionIcon, LoadingOverlay, ScrollArea, Space, Stack, Switch, Table as MantineTable, Text, useMantineTheme, Menu, Button, Popover, Divider } from '@mantine/core';
+import {
+  Box,
+  LoadingOverlay,
+  ScrollArea,
+  Stack,
+  Switch,
+  Table as MantineTable,
+  Text,
+  useMantineTheme,
+  Menu,
+  Button,
+  Popover,
+  Divider,
+} from '@mantine/core';
 import {
   ColumnFiltersState,
   flexRender,
@@ -17,6 +30,8 @@ import {
   InitialTableState,
 } from '@tanstack/react-table';
 import { BoxOff } from 'tabler-icons-react';
+import { useResizeObserver } from '@mantine/hooks';
+
 import useStyles from './DataGrid.styles';
 
 import { GlobalFilter, globalFilterFn } from './GlobalFilter';
@@ -49,9 +64,9 @@ export function DataGrid<TData extends RowData>({
   withColumnToggle,
   withSorting,
   withPagination,
+  withColumnResizing,
+  noFelxLayout,
   pageSizes,
-  initialPageIndex,
-  initialPageSize,
   debug = false,
   // callbacks
   onPageChange,
@@ -61,23 +76,31 @@ export function DataGrid<TData extends RowData>({
   // table ref
   tableRef,
   initialState,
+  state,
   onRow,
   onCell,
   iconColor,
+  empty,
   // common props
   ...others
 }: DataGridProps<TData>) {
-  const [columnVisibility, setColumnVisibility] = useState({})
-  const theme = useMantineTheme();
+  const [columnVisibility, setColumnVisibility] = useState({});
 
-  const { classes, cx } = useStyles(
-    {},
+  const { classes, theme } = useStyles(
+    {
+      height,
+      noEllipsis,
+      withFixedHeader,
+    },
     {
       classNames,
       styles,
       name: 'DataGrid',
     }
   );
+  const [viewportRef, viewportRect] = useResizeObserver();
+  const [tableWidth, setTableWidth] = useState(0);
+
   const color = iconColor || theme.primaryColor;
 
   const table = useReactTable<TData>({
@@ -87,25 +110,36 @@ export function DataGrid<TData extends RowData>({
     globalFilterFn,
     enableColumnFilters: !!withColumnFilters,
     enableSorting: !!withSorting,
-    enableColumnResizing: true,
+    enableColumnResizing: !!withColumnResizing,
     columnResizeMode: 'onChange',
     manualPagination: !!total, // when external data, handle pagination manually
 
     getCoreRowModel: getCoreRowModel(),
+    getFilteredRowModel: getFilteredRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
     getSortedRowModel: getSortedRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
     onColumnVisibilityChange: setColumnVisibility,
-
 
     debugTable: debug,
     debugHeaders: debug,
     debugColumns: debug,
 
     initialState,
+    state,
   });
-
   useImperativeHandle(tableRef, () => table);
+
+  useEffect(() => {
+    if (noFelxLayout) {
+      setTableWidth(table.getTotalSize());
+    } else {
+      const tableWidth = table.getTotalSize();
+      const viewportWidth = viewportRect.width || -1;
+      const nextWidth = tableWidth > viewportWidth ? tableWidth : viewportWidth;
+      setTableWidth(nextWidth);
+    }
+  }, [viewportRect.width, noFelxLayout, table.getTotalSize()]);
 
   const handleGlobalFilterChange: OnChangeFn<string> = useCallback(
     (arg0) =>
@@ -161,18 +195,14 @@ export function DataGrid<TData extends RowData>({
     [onPageChange]
   );
 
-  const pageCount = withPagination
-    ? total
-      ? Math.floor(total / table.getState().pagination.pageSize)
-      : Math.ceil(data.length / table.getState().pagination.pageSize)
-    : -1;
+  const pageCount = withPagination && total ? Math.ceil(total / table.getState().pagination.pageSize) : undefined;
 
   table.setOptions((prev) => ({
     ...prev,
     pageCount,
     state: {
       ...prev.state,
-      columnVisibility
+      columnVisibility,
     },
     onGlobalFilterChange: handleGlobalFilterChange,
     onColumnFiltersChange: handleColumnFiltersChange,
@@ -182,31 +212,17 @@ export function DataGrid<TData extends RowData>({
 
   useEffect(() => {
     if (withPagination) {
-      table.setPageSize(initialPageSize || DEFAULT_INITIAL_SIZE);
+      table.setPageSize(initialState?.pagination?.pageSize || DEFAULT_INITIAL_SIZE);
     } else {
       table.setPageSize(data.length);
     }
-
   }, [withPagination]);
-
 
   return (
     <Stack {...others} spacing={verticalSpacing}>
-
-      {withColumnToggle && (
-        <ToggleColumns table={table}/>
-      )
-
-      }
-      {withGlobalFilter && (
-        <GlobalFilter table={table} globalFilter={table.getState().globalFilter} className={classes.globalFilter} />
-      )}
-      <ScrollArea
-        style={{
-          position: 'relative',
-          height: height ? height + 'px' : '',
-        }}
-      >
+      {withColumnToggle && <ToggleColumns table={table} />}
+      {withGlobalFilter && <GlobalFilter table={table} className={classes.globalFilter} />}
+      <ScrollArea className={classes.scrollArea} viewportRef={viewportRef}>
         <LoadingOverlay visible={loading || false} overlayOpacity={0.8} />
         <MantineTable
           striped={striped}
@@ -215,31 +231,26 @@ export function DataGrid<TData extends RowData>({
           verticalSpacing={verticalSpacing}
           fontSize={fontSize}
           className={classes.table}
+          style={{
+            width: tableWidth,
+          }}
         >
-          <thead
-            className={cx(classes.header, {
-              [classes.headerFixed]: !!withFixedHeader,
-            })}
-            role="rowgroup"
-          >
+          <thead className={classes.thead} role="rowgroup">
             {table.getHeaderGroups().map((group) => (
-              <tr key={group.id} className={classes.row} role="row">
+              <tr key={group.id} className={classes.tr} role="row">
                 {group.headers.map((header) => (
                   <th
                     key={header.id}
                     style={{
                       width: header.getSize(),
                     }}
-                    className={cx(classes.headerCell)}
+                    className={classes.th}
+                    colSpan={header.colSpan}
                     role="columnheader"
                   >
                     {!header.isPlaceholder && (
-                      <>
-                        <div
-                          className={cx({
-                            [classes.ellipsis]: !noEllipsis,
-                          })}
-                        >
+                      <div className={classes.headerCell}>
+                        <div className={classes.headerCellContent}>
                           {flexRender(header.column.columnDef.header, header.getContext())}
                         </div>
                         <div className={classes.headerCellButtons}>
@@ -258,50 +269,54 @@ export function DataGrid<TData extends RowData>({
                             onTouchStart={header.getResizeHandler()}
                           />
                         )}
-                      </>
+                      </div>
                     )}
                   </th>
                 ))}
               </tr>
             ))}
           </thead>
-          <tbody className={classes.body} role="rowgroup">
-            <>
-              {table.getRowModel().rows.length > 0 ? (
-                <>
-                  {table.getRowModel().rows.map((row) => (
-                    <tr {...(onRow && onRow(row))} key={row.id} className={classes.row} role="row">
-                      {row.getVisibleCells().map((cell) => (
-                        <td
-                          {...(onCell && onCell(cell))}
-                          key={cell.id}
-                          style={{
-                            width: cell.column.getSize(),
-                          }}
-                          className={cx(classes.dataCell, {
-                            [classes.ellipsis]: !noEllipsis,
-                          })}
-                          children={flexRender(cell.column.columnDef.cell, cell.getContext())}
-                          role="cell"
-                        />
-                      ))}
-                    </tr>
+          <tbody className={classes.tbody} role="rowgroup">
+            {table.getRowModel().rows.length > 0 ? (
+              table.getRowModel().rows.map((row) => (
+                <tr {...(onRow && onRow(row))} key={row.id} className={classes.tr} role="row">
+                  {row.getVisibleCells().map((cell) => (
+                    <td
+                      {...(onCell && onCell(cell))}
+                      key={cell.id}
+                      style={{
+                        width: cell.column.getSize(),
+                      }}
+                      className={classes.td}
+                      role="cell"
+                    >
+                      <div className={classes.dataCell}>
+                        <div className={classes.dataCellContent}>
+                          {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                        </div>
+                      </div>
+                    </td>
                   ))}
-                </>
-              ) : (
-                <Stack align="center" spacing="md">
-                  <Space h="md" />
-                  <ActionIcon size={100} variant="light" color={iconColor} p="lg" radius="lg">
-                    <BoxOff size={100} />
-                  </ActionIcon>
-                  <Text>No Data</Text>
-                  <Space h="md" />
-                </Stack>
-              )}
-            </>
+                </tr>
+              ))
+            ) : (
+              <tr className={classes.tr} role="row">
+                <td colSpan={table.getVisibleLeafColumns().length}>
+                  <Stack align="center" spacing="xs">
+                    {empty || (
+                      <>
+                        <BoxOff size={64} />
+                        <Text weight="bold">No Data</Text>
+                      </>
+                    )}
+                  </Stack>
+                </td>
+              </tr>
+            )}
           </tbody>
         </MantineTable>
       </ScrollArea>
+
       {withPagination && (
         <Pagination
           totalRows={data.length}

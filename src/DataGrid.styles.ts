@@ -1,38 +1,71 @@
-import { createStyles } from '@mantine/core';
+import { createStyles, CSSObject } from '@mantine/core';
 
-export default createStyles((theme, _params: any) => ({
-  table: {},
-  header: {
-    borderBottom: `2px solid ${theme.colors.dark[4]}`,
+export type DataGridStylesParams = {
+  height?: number;
+  noEllipsis?: boolean;
+  withFixedHeader?: boolean;
+};
+
+const ellipsis: CSSObject = {
+  overflow: 'hidden',
+  textOverflow: 'ellipsis',
+  whiteSpace: 'nowrap',
+};
+
+export default createStyles((theme, { height, noEllipsis, withFixedHeader }: DataGridStylesParams) => ({
+  scrollArea: {
+    position: 'relative',
+    height: height ? height + 'px' : undefined,
   },
-  headerFixed: {
-    position: 'sticky',
-    top: 0,
-    backgroundColor: theme.colorScheme === 'dark' ? theme.colors.dark[7] : theme.white,
-    transition: 'box-shadow 150ms ease',
+  table: {
+    borderCollapse: 'separate',
+    borderSpacing: 0,
   },
-  body: {
-    display: 'block',
+  thead: {
+    position: 'relative',
+    '::after': {
+      content: "' '",
+      backgroundColor: theme.colors.dark[4],
+      position: 'absolute',
+      left: 0,
+      right: 0,
+      bottom: 0,
+      height: '2px',
+    },
+    ...(withFixedHeader && {
+      position: 'sticky',
+      top: 0,
+      backgroundColor: theme.colorScheme === 'dark' ? theme.colors.dark[7] : theme.white,
+      transition: 'box-shadow 150ms ease',
+    }),
+  },
+  tbody: {
     minHeight: '160px',
   },
-  row: {
-    display: 'flex',
-  },
+  tr: {},
+  th: { position: 'relative' },
+  td: {},
   headerCell: {
-    position: 'relative',
     display: 'flex',
+    width: 'inherit',
+    height: 'inherit',
     justifyContent: 'space-between',
   },
+  headerCellContent: {
+    ...(!noEllipsis && ellipsis),
+  },
   headerCellButtons: {
-    display: 'flex',
+    display: 'inline-flex',
     gap: '4px',
     alignItems: 'center',
   },
-  dataCell: {},
-  ellipsis: {
-    overflow: 'hidden',
-    textOverflow: 'ellipsis',
-    whiteSpace: 'nowrap',
+  dataCell: {
+    display: 'flex',
+    width: 'inherit',
+    justifyContent: 'space-between',
+  },
+  dataCellContent: {
+    ...(!noEllipsis && ellipsis),
   },
   resizer: {
     position: 'absolute',

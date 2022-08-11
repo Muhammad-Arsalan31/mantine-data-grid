@@ -1,4 +1,4 @@
-import { ComponentPropsWithoutRef, ComponentType, HTMLAttributes, Ref } from 'react';
+import { ComponentPropsWithoutRef, ComponentType, HTMLAttributes, ReactElement, Ref } from 'react';
 import { DefaultProps, MantineNumberSize, Selectors } from '@mantine/core';
 import {
   Cell,
@@ -11,6 +11,7 @@ import {
   RowData,
   SortingState,
   Table,
+  TableState,
 } from '@tanstack/react-table';
 import useStyles from './DataGrid.styles';
 
@@ -58,6 +59,13 @@ export interface DataGridProps<TData extends RowData>
   /** Show loading overlay */
   loading?: boolean;
 
+  // Layout
+  /** Disable flex layout */
+  noFelxLayout?: boolean;
+
+  /** Enables column resizing */
+  withColumnResizing?: boolean;
+
   // Pagination
   /** Enables pagination */
   withPagination?: boolean;
@@ -66,14 +74,7 @@ export interface DataGridProps<TData extends RowData>
    * Default is `["10", "25", "50", "100"]`
    * */
   pageSizes?: string[];
-  /**
-   * An initial current page index.
-   * Default is `0` */
-  initialPageIndex?: number;
-  /**
-   * An initial current page size (rows per page).
-   * Default is `10`  */
-  initialPageSize?: number;
+
   /**
    * Callback when page index or page size changed
    * */
@@ -108,6 +109,11 @@ export interface DataGridProps<TData extends RowData>
   initialState?: InitialTableState;
 
   /**
+   * The state of table
+   */
+  state?: Partial<TableState>;
+
+  /**
    * Callback to set props pre row
    */
   onRow?: (row: Row<TData>) => HTMLAttributes<HTMLTableRowElement>;
@@ -121,6 +127,11 @@ export interface DataGridProps<TData extends RowData>
    * Change Icon Color on Sort & Filter
    */
   iconColor?: string;
+
+  /**
+   * Empty table element
+   */
+  empty?: ReactElement;
 }
 
 export type DataGridFilterFn<TData extends RowData, TFilter = unknown> = FilterFn<TData> & {

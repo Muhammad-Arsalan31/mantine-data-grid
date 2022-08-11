@@ -9,7 +9,7 @@ import {
 import CodeDemo from '../../components/CodeDemo';
 import { demoData } from '../../demoData';
 
-export default function MainExample() {
+export default function DefaultExample() {
   return (
     <CodeDemo code={grid_usage}>
       <DataGrid
@@ -20,6 +20,7 @@ export default function MainExample() {
         withPagination
         withColumnFilters
         withSorting
+        withColumnResizing
         columns={[
           {
             accessorKey: 'text',

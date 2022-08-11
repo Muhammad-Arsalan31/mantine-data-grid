@@ -18,16 +18,17 @@ import {
 import { useState } from 'react';
 
 import {
-  booleanFilterFn,
+  createDateFilter,
   DataGrid,
   DataGridFilterFn,
   DataGridFiltersState,
   DataGridPaginationState,
   DataGridSortingState,
-  dateFilterFn,
+  createBooleanFilter,
   highlightFilterValue,
-  numberFilterFn,
-  stringFilterFn,
+  createNumberFilter,
+  createStringFilter,
+  StringFilterOperator,
 } from '../../src';
 import { Data, demoData } from '../demoData';
 
@@ -88,8 +89,7 @@ export default function Demo() {
 
   const initialPageIndex = 0;
   const initialPageSize = 10;
-  const [columnVisibility, setColumnVisibility] = useState({})
-
+  const [columnVisibility, setColumnVisibility] = useState({});
 
   const [state, setState] = useState({
     horizontalSpacing: 'xs' as MantineSize,
@@ -102,10 +102,12 @@ export default function Demo() {
     withPagination: true,
     withColumnFilters: true,
     withSorting: true,
+    noFelxLayout: false,
+    withColumnResizing: true,
     striped: true,
     highlightOnHover: true,
     loading: false,
-    empty: false,
+    showEmpty: false,
     iconColor: theme.primaryColor,
   });
 
@@ -133,12 +135,24 @@ export default function Demo() {
     <Grid className={classes.gridWrapper}>
       <Grid.Col span={10} p="md">
         <DataGrid<Data>
-          {...state}
-          
           debug
-          data={state.empty ? [] : state.withPagination ? demoData : demoData.slice(0, 25)}
-          initialPageIndex={initialPageIndex}
-          initialPageSize={initialPageSize}
+          data={state.showEmpty ? [] : state.withPagination ? demoData : demoData.slice(0, 25)}
+          horizontalSpacing={state.horizontalSpacing}
+          verticalSpacing={state.verticalSpacing}
+          fontSize={state.fontSize}
+          height={state.height}
+          withFixedHeader={state.withFixedHeader}
+          noEllipsis={state.noEllipsis}
+          withGlobalFilter={state.withGlobalFilter}
+          withPagination={state.withPagination}
+          withColumnFilters={state.withColumnFilters}
+          withSorting={state.withSorting}
+          withColumnResizing={state.withColumnResizing}
+          noFelxLayout={state.noFelxLayout}
+          striped={state.striped}
+          highlightOnHover={state.highlightOnHover}
+          loading={state.loading}
+          iconColor={state.iconColor}
           onPageChange={onPageChange}
           onSort={onSort}
           onFilter={onFilter}
@@ -153,8 +167,10 @@ export default function Demo() {
             {
               accessorKey: 'text',
               header: 'Text that is too long for a Header',
-              filterFn: stringFilterFn,
-              size: 300,
+              filterFn: createStringFilter({
+                title: 'Filter with Title',
+              }),
+              size: 200,
               cell: highlightFilterValue,
             },
             {
@@ -163,19 +179,27 @@ export default function Demo() {
                 { accessorKey: 'cat', filterFn: catFilter },
                 {
                   accessorKey: 'fish',
-                  filterFn: stringFilterFn,
+                  filterFn: createStringFilter({
+                    title: 'Filter with only includes operator',
+                    fixedOperator: StringFilterOperator.Includes,
+                  }),
                 },
               ],
             },
             {
               accessorKey: 'city',
-              filterFn: stringFilterFn,
+              filterFn: createStringFilter({}),
             },
-            { accessorKey: 'value', filterFn: numberFilterFn },
+            {
+              accessorKey: 'value',
+              filterFn: createNumberFilter({}),
+            },
             {
               accessorKey: 'date',
               cell: (cell) => cell.getValue<Date>()?.toLocaleDateString(),
-              filterFn: dateFilterFn,
+              filterFn: createDateFilter({
+                title: 'Date Filter',
+              }),
             },
             {
               accessorKey: 'bool',
@@ -185,10 +209,13 @@ export default function Demo() {
                 }
                 return <Badge color="red">false</Badge>;
               },
-              filterFn: booleanFilterFn,
+              filterFn: createBooleanFilter({
+                title: 'Boolean filter',
+                trueLabel: 'Ja',
+                falseLabel: 'Nein',
+              }),
             },
           ]}
-          iconColor={state.iconColor}
         />
       </Grid.Col>
       <Grid.Col span={2} p="md" className={classes.gridProps}>
@@ -231,7 +258,25 @@ export default function Demo() {
               })
             }
           />
+          <Switch
+            label="With column resizing"
+            checked={state.withColumnResizing}
+            onChange={(e) =>
+              update({
+                withColumnResizing: e.target.checked,
+              })
+            }
+          />
           <Text color="dimmed">Styles</Text>
+          <Switch
+            label="No flex layout"
+            checked={state.noFelxLayout}
+            onChange={(e) =>
+              update({
+                noFelxLayout: e.target.checked,
+              })
+            }
+          />
           <NumberInput
             label="Table body height"
             value={state.height}
@@ -288,10 +333,10 @@ export default function Demo() {
           />
           <Switch
             label="Empty State"
-            checked={state.empty}
+            checked={state.showEmpty}
             onChange={(e) =>
               update({
-                empty: e.target.checked,
+                showEmpty: e.target.checked,
               })
             }
           />
